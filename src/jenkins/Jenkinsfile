@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+    environment {
+        NODE_VERSION = '18'
+        AWS_REGION = 'us-east-1'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Building application...'
+                sh 'npm install'
+                sh 'npm run build'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                sh 'npm test'
+            }
+        }
+    }
+}
+        stage('Deploy') {
+            steps {
+                echo 'Deploying to staging environment...'
+                sh 'aws s3 sync ./dist/ s3://staging-bucket/'
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Pipeline completed'
+            cleanWs()
+        }
+        failure {
+            echo 'Pipeline failed'
+            emailext (
+                subject: "Pipeline Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "Pipeline failed. Check console output.",
+                to: "${env.CHANGE_AUTHOR_EMAIL}"
+            )
+        }
+    }
+}
